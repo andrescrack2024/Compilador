@@ -1,0 +1,9 @@
+# Programa 5: Demostracion de Error Sintactico
+# Causa: A la estructura 'repetir' le falta su palabra de cierre 'fin'.
+# Fase que lo detecta: Analizador Sintactico (Fase 2).
+entregas = 3
+despegar
+repetir entregas veces
+    volar 12
+    entregar 1
+aterrizar

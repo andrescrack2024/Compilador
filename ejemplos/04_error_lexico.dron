@@ -1,0 +1,7 @@
+# Programa 4: Demostracion de Error Lexico
+# Causa: Se incluye el caracter '@' que no pertenece al alfabeto de DronLang.
+# Fase que lo detecta: Analizador Lexico (Fase 1).
+bateria = 100 @
+despegar
+volar 10
+aterrizar

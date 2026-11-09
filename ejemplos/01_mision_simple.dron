@@ -1,0 +1,10 @@
+# Programa 1: Mision Basica de Entrega
+# Descripcion: Despegue, vuelo a destino, entrega y retorno seguro.
+distancia = 15
+paquetes = 2
+
+despegar
+volar distancia
+entregar paquetes
+volar distancia
+aterrizar

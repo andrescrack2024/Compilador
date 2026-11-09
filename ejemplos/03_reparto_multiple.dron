@@ -1,0 +1,11 @@
+# Programa 3: Reparto Multiple por Sectores con Bucle Repetir
+# Descripcion: Entrega iterativa en 4 zonas residenciales.
+zonas = 4
+distanciaSector = 5 + 3
+
+despegar
+repetir zonas veces
+    volar distanciaSector
+    entregar 1
+fin
+aterrizar

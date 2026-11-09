@@ -1,0 +1,15 @@
+# Programa 2: Control de Autonomia y Bateria con Condicional
+# Descripcion: Evalua si la bateria es suficiente para la ruta larga o corta.
+bateria = 75
+consumoRuta = 10 * 3
+bateriaRestante = bateria - consumoRuta
+
+despegar
+si bateriaRestante > 30 entonces
+    volar 20
+    entregar 1
+sino
+    volar 5
+    entregar 1
+fin
+aterrizar

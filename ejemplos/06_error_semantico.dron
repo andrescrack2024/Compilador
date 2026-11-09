@@ -1,0 +1,8 @@
+# Programa 6: Demostracion de Error Semantico
+# Causa: Se utiliza la variable 'distanciaDestino' sin haber sido definida previamente.
+# Fase que lo detecta: Analizador Semantico (Fase 3).
+paquetes = 2
+despegar
+volar distanciaDestino
+entregar paquetes
+aterrizar
