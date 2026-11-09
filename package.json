@@ -1,0 +1,18 @@
+{
+  "name": "dronlang-compilador",
+  "version": "1.0.0",
+  "description": "Compilador del lenguaje DronLang para Dron de Reparto - Asignatura Compiladores",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test-1": "node index.js ejemplos/01_mision_simple.dron",
+    "test-2": "node index.js ejemplos/02_condicional_bateria.dron --fases",
+    "test-3": "node index.js ejemplos/03_reparto_multiple.dron",
+    "test-lexico": "node index.js ejemplos/04_error_lexico.dron",
+    "test-sintactico": "node index.js ejemplos/05_error_sintactico.dron",
+    "test-semantico": "node index.js ejemplos/06_error_semantico.dron"
+  },
+  "keywords": ["compilador", "dronlang", "lexer", "parser", "ast", "semantico", "codegen"],
+  "author": "Jainer Andres Morales Cuesta, Sharly Andres Mosquera Rodriguez",
+  "license": "MIT"
+}
