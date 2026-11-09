@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compilador DronLang - Entorno de Desarrollo</title>
+  <style>
+    :root {
+      --bg-dark: #1e1e1e;
+      --bg-topbar: #2d2d30;
+      --bg-panel: #252526;
+      --bg-editor: #1e1e1e;
+      --bg-gutter: #252526;
+      --border: #3e3e42;
+      --text: #d4d4d4;
+      --text-muted: #858585;
+      --btn-bg: #333337;
+      --btn-hover: #3e3e42;
+      --btn-primary: #1b6535;
+      --btn-primary-hover: #238636;
+      --btn-blue: #0e639c;
+      --btn-blue-hover: #1177bb;
+      --font-code: 'Consolas', 'Courier New', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    header {
+      background-color: var(--bg-topbar);
+      border-bottom: 1px solid var(--border);
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+    }
+
+    .header-left, .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .app-title {
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: #ffffff;
+      margin-right: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .version-tag {
+      font-size: 0.72rem;
+      background-color: #3e3e42;
+      color: #cccccc;
+      padding: 2px 6px;
+      border-radius: 2px;
+      font-family: var(--font-code);
+      margin-right: 8px;
+    }
+
+    button.btn {
+      background-color: var(--btn-bg);
+      color: #ffffff;
+      border: 1px solid var(--border);
+      padding: 5px 11px;
+      border-radius: 2px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    button.btn:hover {
+      background-color: var(--btn-hover);
+    }
+
+    button.btn-primary {
+      background-color: var(--btn-primary);
+      border-color: #238636;
+      font-weight: 600;
+    }
+
+    button.btn-primary:hover {
+      background-color: var(--btn-primary-hover);
+    }
+
+    button.btn-blue {
+      background-color: var(--btn-blue);
+      border-color: #1177bb;
+    }
+
+    button.btn-blue:hover {
+      background-color: var(--btn-blue-hover);
+    }
+
+    select.select-box {
+      background-color: var(--btn-bg);
+      color: #ffffff;
+      border: 1px solid var(--border);
+      padding: 5px 8px;
+      border-radius: 2px;
+      font-size: 0.78rem;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .main-workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background-color: var(--border);
+      overflow: hidden;
+    }
+
+    .editor-section {
+      background-color: var(--bg-editor);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .editor-tab-bar {
+      height: 32px;
+      background-color: #2d2d30;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+    }
+
+    .tab-file {
+      background-color: var(--bg-editor);
+      color: #ffffff;
+      font-size: 0.78rem;
+      font-family: var(--font-code);
+      padding: 6px 14px;
+      border-top: 2px solid #0e639c;
+      border-right: 1px solid var(--border);
+    }
+
+    .editor-content {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .gutter-lines {
+      width: 44px;
+      background-color: var(--bg-gutter);
+      color: #858585;
+      font-family: var(--font-code);
+      font-size: 13px;
+      line-height: 20px;
+      padding: 8px 6px 8px 0;
+      text-align: right;
+      border-right: 1px solid var(--border);
+      user-select: none;
+      overflow: hidden;
+      white-space: pre-line;
+    }
+
+    textarea#sourceCode {
+      flex: 1;
+      background-color: var(--bg-editor);
+      color: #d4d4d4;
+      font-family: var(--font-code);
+      font-size: 13px;
+      line-height: 20px;
+      padding: 8px 10px;
+      border: none;
+      outline: none;
+      resize: none;
+      white-space: pre;
+      overflow: auto;
+      tab-size: 4;
+      user-select: text;
+    }
+
+    .diagnostic-section {
+      background-color: var(--bg-panel);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .diagnostic-tabs {
+      height: 32px;
+      background-color: #2d2d30;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+
+    .tab-nav-btn {
+      background: transparent;
+      color: #969696;
+      border: none;
+      border-right: 1px solid var(--border);
+      padding: 7px 12px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+
+    .tab-nav-btn:hover {
+      color: #ffffff;
+      background-color: #38383c;
+    }
+
+    .tab-nav-btn.active {
+      background-color: var(--bg-panel);
+      color: #ffffff;
+      border-bottom: 2px solid #0e639c;
+    }
+
+    .panel-view {
+      flex: 1;
+      padding: 12px;
+      overflow: auto;
+      display: none;
+      user-select: text;
+    }
+
+    .panel-view.active {
+      display: block;
+    }
+
+    .terminal-box {
+      background-color: #141414;
+      border: 1px solid #333333;
+      padding: 10px;
+      font-family: var(--font-code);
+      font-size: 12px;
+      line-height: 1.5;
+      color: #cccccc;
+      height: 100%;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+
+    .log-header { color: #569cd6; font-weight: bold; }
+    .log-info { color: #4ec9b0; }
+    .log-err { color: #f48771; }
+    .log-warn { color: #dcdcaa; }
+    .log-out { color: #ce9178; font-weight: bold; }
+
+    table.grid-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-code);
+      font-size: 12px;
+    }
+
+    table.grid-table th {
+      background-color: #2d2d30;
+      color: #cccccc;
+      text-align: left;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+
+    table.grid-table td {
+      padding: 5px 8px;
+      border: 1px solid #333333;
+      color: #d4d4d4;
+    }
+
+    table.grid-table tr:nth-child(even) {
+      background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    pre.code-display {
+      background-color: #141414;
+      border: 1px solid #333333;
+      padding: 10px;
+      font-family: var(--font-code);
+      font-size: 12px;
+      line-height: 1.45;
+      color: #d4d4d4;
+      overflow: auto;
+      height: 100%;
+    }
+
+    footer.app-status {
+      height: 22px;
+      background-color: #007acc;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      font-size: 0.72rem;
+      user-select: none;
+    }
+
+    .doc-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0, 0, 0, 0.65);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      user-select: text;
+    }
+
+    .doc-modal.open {
+      display: flex;
+    }
+
+    .doc-window {
+      background-color: #252526;
+      border: 1px solid #454545;
+      width: 740px;
+      max-width: 94vw;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      border-radius: 2px;
+    }
+
+    .doc-header {
+      background-color: #2d2d30;
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .doc-header h3 {
+      font-size: 0.85rem;
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .doc-body {
+      padding: 16px;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      max-height: 72vh;
+      overflow-y: auto;
+      color: #cccccc;
+    }
+
+    .doc-section {
+      background-color: #1e1e1e;
+      border: 1px solid #333333;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+
+    .doc-section h4 {
+      font-size: 0.82rem;
+      color: #569cd6;
+      margin-bottom: 4px;
+      border-bottom: 1px solid #2d2d30;
+      padding-bottom: 2px;
+    }
+
+    .meta-box {
+      background-color: #181818;
+      border-left: 3px solid #0e639c;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      font-size: 0.78rem;
+      color: #aaaaaa;
+    }
+
+    .syntax-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+      font-family: var(--font-code);
+      font-size: 11.5px;
+    }
+
+    .syntax-table th, .syntax-table td {
+      border: 1px solid #333;
+      padding: 4px 8px;
+      text-align: left;
+    }
+
+    .syntax-table th {
+      background-color: #2a2a2a;
+      color: #9cdcfe;
+    }
+
+    .doc-footer {
+      background-color: #2d2d30;
+      padding: 8px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Reglas de Responsividad (Pantallas Medianas, Laptops y Tablets) */
+    @media (max-width: 960px) {
+      body {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+      }
+
+      header {
+        height: auto;
+        min-height: 44px;
+        padding: 8px 10px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .header-left, .header-right {
+        flex-wrap: wrap;
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .main-workspace {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
+      }
+
+      .editor-section {
+        height: 420px;
+        min-height: 320px;
+        border-bottom: 2px solid var(--border);
+      }
+
+      .diagnostic-section {
+        height: auto;
+        min-height: 460px;
+      }
+
+      #view-consola,
+      #view-sintactico,
+      #view-codegen {
+        height: 380px !important;
+      }
+
+      footer.app-status {
+        height: auto;
+        padding: 6px 10px;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+    }
+
+    /* Reglas de Responsividad (Dispositivos Moviles y Pantallas Estrechas) */
+    @media (max-width: 600px) {
+      header {
+        padding: 6px 8px;
+      }
+
+      .app-title {
+        font-size: 0.8rem;
+      }
+
+      .version-tag {
+        display: none;
+      }
+
+      button.btn {
+        padding: 5px 8px;
+        font-size: 0.72rem;
+      }
+
+      select.select-box {
+        font-size: 0.72rem;
+        max-width: 100%;
+        width: 100%;
+      }
+
+      .header-right {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .editor-section {
+        height: 340px;
+      }
+
+      .gutter-lines {
+        width: 36px;
+        font-size: 11px;
+      }
+
+      textarea#sourceCode {
+        font-size: 12px;
+        padding: 6px;
+      }
+
+      .tab-nav-btn {
+        padding: 6px 8px;
+        font-size: 0.72rem;
+      }
+
+      .doc-window {
+        width: 96vw;
+        max-height: 86vh;
+      }
+
+      .doc-body {
+        padding: 10px;
+        font-size: 0.78rem;
+      }
+
+      .doc-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .doc-footer button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <span class="app-title">Compilador DronLang</span>
+      <span class="version-tag">Dron de Reparto</span>
+
+      <button class="btn btn-primary" onclick="compilar()" title="Compilar y Ejecutar (Ctrl + Enter)">
+        [ Compilar y Ejecutar ]
+      </button>
+
+      <button class="btn" onclick="limpiarEditor()">
+        [ Nuevo ]
+      </button>
+
+      <button class="btn" onclick="guardarArchivo()">
+        [ Guardar .dron ]
+      </button>
+
+      <button class="btn" onclick="document.getElementById('inputArchivo').click()">
+        [ Abrir .dron ]
+      </button>
+      <input type="file" id="inputArchivo" accept=".dron,.txt" style="display:none" onchange="cargarArchivo(event)">
+    </div>
+
+    <div class="header-right">
+      <span style="font-size: 0.75rem; color: #969696;">Programa:</span>
+      <select id="comboEjemplos" class="select-box" onchange="seleccionarEjemplo()">
+        <option value="1">1. Correcto: Mision Basica de Entrega</option>
+        <option value="2">2. Correcto: Condicional de Bateria (si/sino)</option>
+        <option value="3">3. Correcto: Repeticion por Sectores (repetir)</option>
+        <option value="4">4. Error Lexico: Simbolo no reconocido (@)</option>
+        <option value="5">5. Error Sintactico: Falta de 'fin' en repetir</option>
+        <option value="6">6. Error Semantico: Variable no definida</option>
+      </select>
+
+      <button class="btn btn-blue" onclick="mostrarManual(true)">
+        [ Manual de DronLang ]
+      </button>
+    </div>
+  </header>
+
+  <div class="main-workspace">
+    <div class="editor-section">
+      <div class="editor-tab-bar">
+        <div class="tab-file">mision.dron</div>
+      </div>
+      <div class="editor-content">
+        <div id="gutterLineas" class="gutter-lines">1</div>
+        <textarea id="sourceCode" spellcheck="false" placeholder="# Ingrese las instrucciones para el Dron aqui..."></textarea>
+      </div>
+    </div>
+
+    <div class="diagnostic-section">
+      <div class="diagnostic-tabs">
+        <button class="tab-nav-btn active" onclick="cambiarPestana('view-consola', this)">
+          Consola y Simulacion
+        </button>
+        <button class="tab-nav-btn" onclick="cambiarPestana('view-lexico', this)">
+          Fase 1: Tokens (Lexico)
+        </button>
+        <button class="tab-nav-btn" onclick="cambiarPestana('view-sintactico', this)">
+          Fase 2: AST (Sintactico)
+        </button>
+        <button class="tab-nav-btn" onclick="cambiarPestana('view-semantico', this)">
+          Fase 3: Tabla de Simbolos
+        </button>
+        <button class="tab-nav-btn" onclick="cambiarPestana('view-codegen', this)">
+          Fase 4: Comandos y Codigo Objeto
+        </button>
+        <button class="tab-nav-btn" onclick="cambiarPestana('view-manual', this)">
+          Manual y Gramatica
+        </button>
+      </div>
+
+      <div id="view-consola" class="panel-view active" style="height: calc(100% - 32px);">
+        <div id="consolaSalida" class="terminal-box">Presione [ Compilar y Ejecutar ] o use Ctrl+Enter para procesar el programa del Dron.</div>
+      </div>
+
+      <div id="view-lexico" class="panel-view">
+        <div style="font-size: 0.75rem; color: #858585; margin-bottom: 8px;">
+          Resultado del Analizador Lexico (Flujo de Tokens):
+        </div>
+        <table class="grid-table">
+          <thead>
+            <tr>
+              <th style="width: 40px;">No.</th>
+              <th>Tipo de Token</th>
+              <th>Lexema</th>
+              <th style="width: 60px;">Linea</th>
+              <th style="width: 60px;">Columna</th>
+            </tr>
+          </thead>
+          <tbody id="tablaTokens"></tbody>
+        </table>
+      </div>
+
+      <div id="view-sintactico" class="panel-view" style="height: calc(100% - 32px);">
+        <pre id="vistaAst" class="code-display">// Arbol de Sintaxis Abstracta (AST)</pre>
+      </div>
+
+      <div id="view-semantico" class="panel-view">
+        <div id="areaErroresSemanticos" style="margin-bottom: 10px;"></div>
+        <div style="font-size: 0.75rem; color: #858585; margin-bottom: 8px;">
+          Tabla de Simbolos construida por el Analizador Semantico:
+        </div>
+        <table class="grid-table">
+          <thead>
+            <tr>
+              <th>Identificador</th>
+              <th>Linea Declaracion</th>
+            </tr>
+          </thead>
+          <tbody id="tablaSimbolos"></tbody>
+        </table>
+      </div>
+
+      <div id="view-codegen" class="panel-view" style="height: calc(100% - 32px);">
+        <div style="font-size: 0.75rem; color: #858585; margin-bottom: 6px;">
+          Comandos de Bajo Nivel generados para el Dron:
+        </div>
+        <pre id="vistaComandos" class="code-display" style="height: 120px; margin-bottom: 12px;"></pre>
+        <div style="font-size: 0.75rem; color: #858585; margin-bottom: 6px;">
+          Codigo Objeto Ejecutable (JavaScript):
+        </div>
+        <pre id="vistaJs" class="code-display" style="height: calc(100% - 170px);"></pre>
+      </div>
+
+      <div id="view-manual" class="panel-view">
+        <div class="doc-section">
+          <h4>Especificacion Rapida de DronLang</h4>
+          <table class="syntax-table">
+            <thead>
+              <tr>
+                <th>Instruccion</th>
+                <th>Sintaxis</th>
+                <th>Proposito Operativo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Despegar</td>
+                <td><code>despegar</code></td>
+                <td>Enciende motores y eleva el dron a altitud de crucero.</td>
+              </tr>
+              <tr>
+                <td>Volar</td>
+                <td><code>volar &lt;distancia&gt;</code></td>
+                <td>Desplaza el dron hacia adelante los metros especificados.</td>
+              </tr>
+              <tr>
+                <td>Entregar</td>
+                <td><code>entregar &lt;cantidad&gt;</code></td>
+                <td>Descarga paquetes en el punto de destino.</td>
+              </tr>
+              <tr>
+                <td>Aterrizar</td>
+                <td><code>aterrizar</code></td>
+                <td>Realiza descenso controlado y apaga motores.</td>
+              </tr>
+              <tr>
+                <td>Variables</td>
+                <td><code>cajas = 4</code></td>
+                <td>Asigna un valor numerico a un identificador.</td>
+              </tr>
+              <tr>
+                <td>Repeticion</td>
+                <td><code>repetir n veces ... fin</code></td>
+                <td>Ejecuta un bloque de vuelo iterativo.</td>
+              </tr>
+              <tr>
+                <td>Condicion</td>
+                <td><code>si cond entonces ... sino ... fin</code></td>
+                <td>Control de decisiones (ej. verificacion de bateria).</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-status">
+    <div style="display:flex; gap:16px;">
+      <span id="estadoCompilador">Listo</span>
+      <span id="posicionCursor">Ln 1, Col 1</span>
+    </div>
+    <div style="display:flex; gap:16px;">
+      <span>UTF-8</span>
+      <span>DronLang (.dron)</span>
+      <span>Tematica: Dron de Reparto</span>
+    </div>
+  </footer>
+
+  <div id="modalManual" class="doc-modal" onclick="if(event.target === this) mostrarManual(false)">
+    <div class="doc-window">
+      <div class="doc-header">
+        <h3>Manual de Especificacion y Diseno - Lenguaje DronLang</h3>
+        <button class="btn" onclick="mostrarManual(false)" style="padding: 2px 8px;">Cerrar</button>
+      </div>
+
+      <div class="doc-body">
+        <div class="meta-box">
+          <b>Asignatura:</b> Compiladores<br>
+          <b>Docente:</b> Ing. Hasler Gamboa Berrio<br>
+          <b>Tematica Asignada:</b> Dron de Reparto<br>
+          <b>Integrantes:</b> Jainer Andres Morales Cuesta, Sharly Andres Mosquera Rodriguez
+        </div>
+
+        <div class="doc-section">
+          <h4>1. Descripcion del Lenguaje DronLang</h4>
+          <p>
+            <b>DronLang</b> es un lenguaje imperativo de dominio especifico (DSL) disenado para controlar la secuencia de vuelo y distribucion de paquetes de un dron de reparto autonomo.
+          </p>
+        </div>
+
+        <div class="doc-section">
+          <h4>2. Las 4 Fases del Compilador</h4>
+          <ul style="margin-left: 18px; margin-top: 4px;">
+            <li><b>Fase 1 (Lexico):</b> Reconoce palabras clave (despegar, volar, entregar, aterrizar, repetir, veces, si, entonces, sino, fin), numeros, variables y operadores (=, +, -, *, &gt;, &lt;, ==). Ignora comentarios y espacios.</li>
+            <li><b>Fase 2 (Sintactico):</b> Verifica que las instrucciones respeten la gramatica y arma el Arbol AST. Detecta omisiones como la falta de 'veces', 'entonces' o 'fin'.</li>
+            <li><b>Fase 3 (Semantico):</b> Construye la Tabla de Simbolos y asegura que no se usen variables sin definir, ni distancias o repeticiones con valores negativos.</li>
+            <li><b>Fase 4 (Generacion de Codigo):</b> Genera la lista de comandos de vuelo de bajo nivel (DESPEGAR, VOLAR, ENTREGAR, ATERRIZAR) y el codigo ejecutable en JavaScript.</li>
+          </ul>
+        </div>
+
+        <div class="doc-section">
+          <h4>3. Resumen de Sintaxis</h4>
+          <table class="syntax-table">
+            <thead>
+              <tr>
+                <th>Instruccion</th>
+                <th>Ejemplo en DronLang</th>
+                <th>Explicacion</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Despegar</td>
+                <td><code>despegar</code></td>
+                <td>Inicia despegue vertical.</td>
+              </tr>
+              <tr>
+                <td>Volar</td>
+                <td><code>volar 15</code></td>
+                <td>Avanza 15 metros en linea recta.</td>
+              </tr>
+              <tr>
+                <td>Entregar</td>
+                <td><code>entregar 2</code></td>
+                <td>Entrega 2 paquetes en el punto.</td>
+              </tr>
+              <tr>
+                <td>Aterrizar</td>
+                <td><code>aterrizar</code></td>
+                <td>Aterriza y finaliza la mision.</td>
+              </tr>
+              <tr>
+                <td>Asignacion</td>
+                <td><code>bateria = 100</code></td>
+                <td>Guarda un numero en una variable.</td>
+              </tr>
+              <tr>
+                <td>Repeticion</td>
+                <td><code>repetir 3 veces ... fin</code></td>
+                <td>Bucle de ejecucion finita.</td>
+              </tr>
+              <tr>
+                <td>Condicion</td>
+                <td><code>si carga &gt; 10 entonces ... fin</code></td>
+                <td>Bifurcacion logica segun estado.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="doc-footer">
+        <label style="font-size: 0.75rem; color: #858585; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+          <input type="checkbox" id="chkAutoMostrar" onchange="guardarPreferenciaGuia()">
+          Mostrar esta guia al iniciar el compilador
+        </label>
+        <button class="btn btn-blue" onclick="mostrarManual(false)" style="padding: 5px 14px;">
+          Entendido / Ir al Editor
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const EJEMPLOS = {
+      '1': `# Programa 1: Mision Basica de Entrega
+# Descripcion: Despegue, vuelo a destino, entrega y retorno seguro.
+distancia = 15
+paquetes = 2
+
+despegar
+volar distancia
+entregar paquetes
+volar distancia
+aterrizar`,
+
+      '2': `# Programa 2: Control de Autonomia y Bateria con Condicional
+# Descripcion: Evalua si la bateria es suficiente para la ruta larga o corta.
+bateria = 75
+consumoRuta = 10 * 3
+bateriaRestante = bateria - consumoRuta
+
+despegar
+si bateriaRestante > 30 entonces
+    volar 20
+    entregar 1
+sino
+    volar 5
+    entregar 1
+fin
+aterrizar`,
+
+      '3': `# Programa 3: Reparto Multiple por Sectores con Bucle Repetir
+# Descripcion: Entrega iterativa en 4 zonas residenciales.
+zonas = 4
+distanciaSector = 5 + 3
+
+despegar
+repetir zonas veces
+    volar distanciaSector
+    entregar 1
+fin
+aterrizar`,
+
+      '4': `# Programa 4: Demostracion de Error Lexico
+# Causa: Se incluye el caracter '@' que no pertenece al alfabeto de DronLang.
+# Fase que lo detecta: Analizador Lexico (Fase 1).
+bateria = 100 @
+despegar
+volar 10
+aterrizar`,
+
+      '5': `# Programa 5: Demostracion de Error Sintactico
+# Causa: A la estructura 'repetir' le falta su palabra de cierre 'fin'.
+# Fase que lo detecta: Analizador Sintactico (Fase 2).
+entregas = 3
+despegar
+repetir entregas veces
+    volar 12
+    entregar 1
+aterrizar`,
+
+      '6': `# Programa 6: Demostracion de Error Semantico
+# Causa: Se utiliza la variable 'distanciaDestino' sin haber sido definida previamente.
+# Fase que lo detecta: Analizador Semantico (Fase 3).
+paquetes = 2
+despegar
+volar distanciaDestino
+entregar paquetes
+aterrizar`
+    };
+
+    const editor = document.getElementById('sourceCode');
+    const gutter = document.getElementById('gutterLineas');
+    const posCursor = document.getElementById('posicionCursor');
+    const statusComp = document.getElementById('estadoCompilador');
+
+    function actualizarLineas() {
+      const cantidad = editor.value.split('\n').length;
+      let lineas = '';
+      for (let i = 1; i <= cantidad; i++) {
+        lineas += i + '\n';
+      }
+      gutter.textContent = lineas;
+    }
+
+    editor.addEventListener('input', actualizarLineas);
+    editor.addEventListener('scroll', () => {
+      gutter.scrollTop = editor.scrollTop;
+    });
+
+    editor.addEventListener('keyup', actualizarCursor);
+    editor.addEventListener('click', actualizarCursor);
+
+    function actualizarCursor() {
+      const pos = editor.selectionStart;
+      const texto = editor.value.substring(0, pos);
+      const partes = texto.split('\n');
+      const lin = partes.length;
+      const col = partes[partes.length - 1].length + 1;
+      posCursor.textContent = `Ln ${lin}, Col ${col}`;
+    }
+
+    editor.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        editor.value = editor.value.substring(0, start) + '    ' + editor.value.substring(end);
+        editor.selectionStart = editor.selectionEnd = start + 4;
+        actualizarLineas();
+      }
+
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        compilar();
+      }
+    });
+
+    function limpiarEditor() {
+      if (editor.value.trim() !== '' && !confirm('Desea limpiar el editor de codigo?')) {
+        return;
+      }
+      editor.value = '';
+      actualizarLineas();
+      document.getElementById('consolaSalida').textContent = "Editor limpio. Ingrese codigo y presione [ Compilar y Ejecutar ].";
+      limpiarVistas();
+    }
+
+    function seleccionarEjemplo() {
+      const opt = document.getElementById('comboEjemplos').value;
+      editor.value = EJEMPLOS[opt] || '';
+      actualizarLineas();
+      compilar();
+    }
+
+    function guardarArchivo() {
+      const blob = new Blob([editor.value], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'mision.dron';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function cargarArchivo(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        editor.value = evt.target.result;
+        actualizarLineas();
+        compilar();
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    }
+
+    function mostrarManual(abrir) {
+      const modal = document.getElementById('modalManual');
+      if (abrir) modal.classList.add('open');
+      else modal.classList.remove('open');
+    }
+
+    function guardarPreferenciaGuia() {
+      const chk = document.getElementById('chkAutoMostrar');
+      localStorage.setItem('dronlang_mostrar_guia', chk.checked ? 'true' : 'false');
+    }
+
+    function cambiarPestana(idVista, boton) {
+      document.querySelectorAll('.tab-nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.panel-view').forEach(p => p.classList.remove('active'));
+      boton.classList.add('active');
+      document.getElementById(idVista).classList.add('active');
+    }
+
+    function limpiarVistas() {
+      document.getElementById('tablaTokens').innerHTML = '';
+      document.getElementById('vistaAst').textContent = '// Vacio';
+      document.getElementById('tablaSimbolos').innerHTML = '';
+      document.getElementById('areaErroresSemanticos').innerHTML = '';
+      document.getElementById('vistaComandos').textContent = '// Vacio';
+      document.getElementById('vistaJs').textContent = '// Vacio';
+    }
+
+    // ==========================================
+    // LOGICA INTERNA DEL COMPILADOR DRONLANG
+    // ==========================================
+    const TIPOS = {
+      PALABRA_CLAVE: 'PALABRA_CLAVE',
+      IDENTIFICADOR: 'IDENTIFICADOR',
+      NUMERO: 'NUMERO',
+      OPERADOR: 'OPERADOR',
+      DELIMITADOR: 'DELIMITADOR'
+    };
+
+    const PALABRAS_CLAVE = new Set([
+      'despegar', 'volar', 'entregar', 'aterrizar', 'repetir', 'veces', 'si', 'entonces', 'sino', 'fin'
+    ]);
+
+    class Lexer {
+      constructor(src) {
+        this.src = src;
+        this.pos = 0;
+        this.lin = 1;
+        this.col = 1;
+        this.tokens = [];
+      }
+      curr() { return this.src[this.pos] || null; }
+      next() { return this.src[this.pos + 1] || null; }
+      adv() {
+        if (this.curr() === '\n') { this.lin++; this.col = 1; }
+        else { this.col++; }
+        this.pos++;
+        return this.curr();
+      }
+      tokenizar() {
+        while (this.pos < this.src.length) {
+          let c = this.curr();
+          if (c === ' ' || c === '\t' || c === '\r' || c === '\n') { this.adv(); continue; }
+          if ((c === '/' && this.next() === '/') || c === '#') {
+            while (this.curr() && this.curr() !== '\n') this.adv();
+            continue;
+          }
+
+          const l = this.lin, k = this.col;
+
+          if (/[0-9]/.test(c)) {
+            let num = '';
+            while (this.curr() && /[0-9]/.test(this.curr())) { num += this.curr(); this.adv(); }
+            if (this.curr() === '.' && /[0-9]/.test(this.next())) {
+              num += '.'; this.adv();
+              while (this.curr() && /[0-9]/.test(this.curr())) { num += this.curr(); this.adv(); }
+            }
+            this.tokens.push({ tipo: TIPOS.NUMERO, valor: parseFloat(num), linea: l, columna: k });
+            continue;
+          }
+
+          if (/[a-zA-ZáéíóúÁÉÍÓÚñÑ_]/.test(c)) {
+            let id = '';
+            while (this.curr() && /[a-zA-ZáéíóúÁÉÍÓÚñÑ_0-9]/.test(this.curr())) { id += this.curr(); this.adv(); }
+            const t = PALABRAS_CLAVE.has(id) ? TIPOS.PALABRA_CLAVE : TIPOS.IDENTIFICADOR;
+            this.tokens.push({ tipo: t, valor: id, linea: l, columna: k });
+            continue;
+          }
+
+          if (c === '=' && this.next() === '=') {
+            this.tokens.push({ tipo: TIPOS.OPERADOR, valor: '==', linea: l, columna: k });
+            this.adv(); this.adv();
+            continue;
+          }
+
+          if (['=', '+', '-', '*', '>', '<'].includes(c)) {
+            this.tokens.push({ tipo: TIPOS.OPERADOR, valor: c, linea: l, columna: k });
+            this.adv();
+            continue;
+          }
+
+          if (c === '(' || c === ')') {
+            this.tokens.push({ tipo: TIPOS.DELIMITADOR, valor: c, linea: l, columna: k });
+            this.adv();
+            continue;
+          }
+
+          throw new Error(`[Error Lexico] Linea ${this.lin}, Columna ${this.col}: Simbolo desconocido '${c}'`);
+        }
+        return this.tokens;
+      }
+    }
+
+    class Parser {
+      constructor(tokens) {
+        this.tokens = tokens;
+        this.pos = 0;
+      }
+      curr() { return this.tokens[this.pos] || null; }
+      prev() { return this.tokens[this.pos - 1] || null; }
+      isEnd() { return this.pos >= this.tokens.length; }
+      adv() { if (!this.isEnd()) this.pos++; return this.prev(); }
+      match(tipo, val = null) {
+        if (this.isEnd()) return false;
+        const t = this.curr();
+        if (t.tipo !== tipo) return false;
+        if (val !== null && t.valor !== val) return false;
+        this.adv();
+        return true;
+      }
+      consume(tipo, val, msg) {
+        const t = this.curr();
+        if (t && t.tipo === tipo && (val === null || t.valor === val)) return this.adv();
+        const lin = t ? t.linea : (this.prev() ? this.prev().linea : 1);
+        const col = t ? t.columna : (this.prev() ? this.prev().columna : 1);
+        throw new Error(`[Error Sintactico] Linea ${lin}, Columna ${col}: ${msg}. (Se encontro: ${t ? `'${t.valor}'` : 'fin de archivo'})`);
+      }
+
+      parsear() {
+        const cuerpo = [];
+        while (!this.isEnd()) cuerpo.push(this.instruccion());
+        return { tipo: 'Programa', cuerpo };
+      }
+
+      instruccion() {
+        const t = this.curr();
+        if (!t) return null;
+
+        if (t.tipo === TIPOS.PALABRA_CLAVE) {
+          if (t.valor === 'despegar') { this.adv(); return { tipo: 'Despegar', linea: t.linea }; }
+          if (t.valor === 'aterrizar') { this.adv(); return { tipo: 'Aterrizar', linea: t.linea }; }
+          if (t.valor === 'volar') {
+            this.adv();
+            return { tipo: 'Volar', distancia: this.expresion(), linea: t.linea };
+          }
+          if (t.valor === 'entregar') {
+            this.adv();
+            return { tipo: 'Entregar', cantidad: this.expresion(), linea: t.linea };
+          }
+          if (t.valor === 'repetir') return this.instRepetir();
+          if (t.valor === 'si') return this.instSi();
+        }
+
+        if (t.tipo === TIPOS.IDENTIFICADOR) {
+          const id = this.adv();
+          this.consume(TIPOS.OPERADOR, '=', "Se esperaba '=' en la asignacion");
+          const v = this.expresion();
+          return { tipo: 'Asignacion', nombre: id.valor, valor: v, linea: id.linea };
+        }
+
+        throw new Error(`[Error Sintactico] Linea ${t.linea}: Instruccion no valida que inicia con '${t.valor}'`);
+      }
+
+      instRepetir() {
+        const r = this.consume(TIPOS.PALABRA_CLAVE, 'repetir', "Se esperaba 'repetir'");
+        const cant = this.expresion();
+        this.consume(TIPOS.PALABRA_CLAVE, 'veces', "Se esperaba 'veces' despues de la cantidad");
+        const cuerpo = [];
+        while (!this.isEnd() && !(this.curr().tipo === TIPOS.PALABRA_CLAVE && this.curr().valor === 'fin')) {
+          cuerpo.push(this.instruccion());
+        }
+        this.consume(TIPOS.PALABRA_CLAVE, 'fin', "Se esperaba 'fin' para cerrar 'repetir'");
+        return { tipo: 'Repetir', cantidad: cant, cuerpo, linea: r.linea };
+      }
+
+      instSi() {
+        const s = this.consume(TIPOS.PALABRA_CLAVE, 'si', "Se esperaba 'si'");
+        const cond = this.expresion();
+        this.consume(TIPOS.PALABRA_CLAVE, 'entonces', "Se esperaba 'entonces' tras la condicion");
+        const cSi = [];
+        while (!this.isEnd() && !(this.curr().tipo === TIPOS.PALABRA_CLAVE && (this.curr().valor === 'sino' || this.curr().valor === 'fin'))) {
+          cSi.push(this.instruccion());
+        }
+        let cSino = null;
+        if (this.match(TIPOS.PALABRA_CLAVE, 'sino')) {
+          cSino = [];
+          while (!this.isEnd() && !(this.curr().tipo === TIPOS.PALABRA_CLAVE && this.curr().valor === 'fin')) {
+            cSino.push(this.instruccion());
+          }
+        }
+        this.consume(TIPOS.PALABRA_CLAVE, 'fin', "Se esperaba 'fin' para cerrar 'si'");
+        return { tipo: 'CondicionalSi', condicion: cond, cuerpoSi: cSi, cuerpoSino: cSino, linea: s.linea };
+      }
+
+      expresion() { return this.comparacion(); }
+
+      comparacion() {
+        let e = this.adicion();
+        while (!this.isEnd() && this.curr().tipo === TIPOS.OPERADOR && ['>', '<', '=='].includes(this.curr().valor)) {
+          const op = this.adv().valor;
+          e = { tipo: 'ExpresionBinaria', operador: op, izquierda: e, derecha: this.adicion() };
+        }
+        return e;
+      }
+
+      adicion() {
+        let e = this.multiplicacion();
+        while (!this.isEnd() && this.curr().tipo === TIPOS.OPERADOR && ['+', '-'].includes(this.curr().valor)) {
+          const op = this.adv().valor;
+          e = { tipo: 'ExpresionBinaria', operador: op, izquierda: e, derecha: this.multiplicacion() };
+        }
+        return e;
+      }
+
+      multiplicacion() {
+        let e = this.unario();
+        while (!this.isEnd() && this.curr().tipo === TIPOS.OPERADOR && this.curr().valor === '*') {
+          const op = this.adv().valor;
+          e = { tipo: 'ExpresionBinaria', operador: op, izquierda: e, derecha: this.unario() };
+        }
+        return e;
+      }
+
+      unario() {
+        if (this.curr() && this.curr().tipo === TIPOS.OPERADOR && this.curr().valor === '-') {
+          const op = this.adv().valor;
+          return { tipo: 'ExpresionUnaria', operador: op, argumento: this.unario() };
+        }
+        return this.primario();
+      }
+
+      primario() {
+        const t = this.curr();
+        if (!t) throw new Error('[Error Sintactico] Expresion incompleta');
+        if (t.tipo === TIPOS.NUMERO) { this.adv(); return { tipo: 'Numero', valor: t.valor, linea: t.linea }; }
+        if (t.tipo === TIPOS.IDENTIFICADOR) { this.adv(); return { tipo: 'Identificador', nombre: t.valor, linea: t.linea }; }
+        if (t.tipo === TIPOS.DELIMITADOR && t.valor === '(') {
+          this.adv();
+          const e = this.expresion();
+          this.consume(TIPOS.DELIMITADOR, ')', "Falta ')'");
+          return e;
+        }
+        throw new Error(`[Error Sintactico] Linea ${t.linea}: Se esperaba numero o variable, pero se encontro '${t.valor}'`);
+      }
+    }
+
+    class AnalizadorSemantico {
+      constructor() {
+        this.tabla = new Map();
+        this.errores = [];
+        this.advertencias = [];
+      }
+      analizar(ast) {
+        this.tabla.clear();
+        this.errores = [];
+        this.advertencias = [];
+        for (const n of ast.cuerpo) this.visitar(n);
+        return {
+          tabla: Array.from(this.tabla.entries()).map(([k, v]) => ({ nombre: k, linea: v.linea })),
+          errores: this.errores,
+          advertencias: this.advertencias,
+          valido: this.errores.length === 0
+        };
+      }
+      visitar(n) {
+        if (!n) return;
+        if (n.tipo === 'Asignacion') {
+          this.evalExpr(n.valor);
+          this.tabla.set(n.nombre, { linea: n.linea });
+        } else if (n.tipo === 'Volar') {
+          if (n.distancia.tipo === 'Numero' && n.distancia.valor < 0) {
+            this.errores.push(`[Error Semantico] Linea ${n.linea}: La distancia de vuelo no puede ser negativa (${n.distancia.valor}).`);
+          }
+          this.evalExpr(n.distancia);
+        } else if (n.tipo === 'Entregar') {
+          if (n.cantidad.tipo === 'Numero' && n.cantidad.valor <= 0) {
+            this.errores.push(`[Error Semantico] Linea ${n.linea}: La cantidad de paquetes debe ser mayor a cero (${n.cantidad.valor}).`);
+          }
+          this.evalExpr(n.cantidad);
+        } else if (n.tipo === 'Repetir') {
+          if (n.cantidad.tipo === 'Numero' && n.cantidad.valor < 0) {
+            this.errores.push(`[Error Semantico] Linea ${n.linea}: 'repetir' no acepta valores negativos (${n.cantidad.valor}).`);
+          }
+          this.evalExpr(n.cantidad);
+          n.cuerpo.forEach(i => this.visitar(i));
+        } else if (n.tipo === 'CondicionalSi') {
+          this.evalExpr(n.condicion);
+          n.cuerpoSi.forEach(i => this.visitar(i));
+          if (n.cuerpoSino) n.cuerpoSino.forEach(i => this.visitar(i));
+        }
+      }
+      evalExpr(e) {
+        if (!e) return;
+        if (e.tipo === 'Identificador') {
+          if (!this.tabla.has(e.nombre)) {
+            this.errores.push(`[Error Semantico] Linea ${e.linea}: La variable '${e.nombre}' no ha sido definida previamente.`);
+          }
+          return;
+        }
+        if (e.tipo === 'ExpresionUnaria') this.evalExpr(e.argumento);
+        if (e.tipo === 'ExpresionBinaria') {
+          this.evalExpr(e.izquierda);
+          this.evalExpr(e.derecha);
+        }
+      }
+    }
+
+    class GeneradorCodigo {
+      constructor() { this.ind = 1; }
+      tab() { return '  '.repeat(this.ind); }
+      generar(ast) {
+        let lineas = [
+          '// Codigo de Control del Dron de Reparto',
+          '(() => {',
+          '  console.log("[SISTEMA] Iniciando mision de vuelo del Dron...");'
+        ];
+        for (const n of ast.cuerpo) lineas.push(this.genNodo(n));
+        lineas.push('  console.log("[SISTEMA] Mision del Dron finalizada con exito.");');
+        lineas.push('})();');
+        return lineas.join('\n');
+      }
+      genNodo(n) {
+        if (n.tipo === 'Asignacion') {
+          return `${this.tab()}let ${n.nombre} = ${this.genExpr(n.valor)};`;
+        }
+        if (n.tipo === 'Despegar') {
+          return `${this.tab()}console.log("[DRON: COMANDO] -> DESPEGAR: Motores activos");`;
+        }
+        if (n.tipo === 'Aterrizar') {
+          return `${this.tab()}console.log("[DRON: COMANDO] -> ATERRIZAR: Descenso seguro completado");`;
+        }
+        if (n.tipo === 'Volar') {
+          return `${this.tab()}console.log("[DRON: COMANDO] -> VOLAR: " + (${this.genExpr(n.distancia)}) + " metros");`;
+        }
+        if (n.tipo === 'Entregar') {
+          return `${this.tab()}console.log("[DRON: COMANDO] -> ENTREGAR: Descargando " + (${this.genExpr(n.cantidad)}) + " paquete(s)");`;
+        }
+        if (n.tipo === 'Repetir') {
+          let s = `${this.tab()}for (let __i = 0; __i < (${this.genExpr(n.cantidad)}); __i++) {\n`;
+          this.ind++;
+          s += n.cuerpo.map(i => this.genNodo(i)).join('\n') + '\n';
+          this.ind--;
+          s += `${this.tab()}}`;
+          return s;
+        }
+        if (n.tipo === 'CondicionalSi') {
+          let s = `${this.tab()}if (${this.genExpr(n.condicion)}) {\n`;
+          this.ind++;
+          s += n.cuerpoSi.map(i => this.genNodo(i)).join('\n') + '\n';
+          this.ind--;
+          s += `${this.tab()}}`;
+          if (n.cuerpoSino && n.cuerpoSino.length) {
+            s += ` else {\n`;
+            this.ind++;
+            s += n.cuerpoSino.map(i => this.genNodo(i)).join('\n') + '\n';
+            this.ind--;
+            s += `${this.tab()}}`;
+          }
+          return s;
+        }
+        return '';
+      }
+      genExpr(e) {
+        if (!e) return '0';
+        if (e.tipo === 'Numero') return String(e.valor);
+        if (e.tipo === 'Identificador') return e.nombre;
+        if (e.tipo === 'ExpresionUnaria') return `(${e.operador}${this.genExpr(e.argumento)})`;
+        if (e.tipo === 'ExpresionBinaria') {
+          return `(${this.genExpr(e.izquierda)} ${e.operador} ${this.genExpr(e.derecha)})`;
+        }
+        return '0';
+      }
+      generarComandosPlanos(ast) {
+        const cmds = [];
+        const rec = (nodos) => {
+          for (const n of nodos) {
+            if (n.tipo === 'Despegar') cmds.push('DESPEGAR');
+            else if (n.tipo === 'Aterrizar') cmds.push('ATERRIZAR');
+            else if (n.tipo === 'Volar') cmds.push(`VOLAR ${this.genExpr(n.distancia)}`);
+            else if (n.tipo === 'Entregar') cmds.push(`ENTREGAR ${this.genExpr(n.cantidad)}`);
+            else if (n.tipo === 'Repetir') rec(n.cuerpo);
+            else if (n.tipo === 'CondicionalSi') {
+              rec(n.cuerpoSi);
+              if (n.cuerpoSino) rec(n.cuerpoSino);
+            }
+          }
+        };
+        rec(ast.cuerpo);
+        return cmds;
+      }
+    }
+
+    function compilar() {
+      const codigo = editor.value;
+      const term = document.getElementById('consolaSalida');
+      const tokensBody = document.getElementById('tablaTokens');
+      const astView = document.getElementById('vistaAst');
+      const simbolosBody = document.getElementById('tablaSimbolos');
+      const errArea = document.getElementById('areaErroresSemanticos');
+      const cmdView = document.getElementById('vistaComandos');
+      const jsView = document.getElementById('vistaJs');
+
+      limpiarVistas();
+
+      if (!codigo.trim()) {
+        term.innerHTML = '<span class="log-warn">[AVISO] El editor de codigo fuente esta vacio.</span>';
+        statusComp.textContent = 'Editor vacio';
+        return;
+      }
+
+      const t0 = performance.now();
+      let log = [];
+      log.push(`<span class="log-header">$ dronc mision.dron</span>`);
+
+      try {
+        const lexer = new Lexer(codigo);
+        const tokens = lexer.tokenizar();
+        log.push(`<span class="log-info">[FASE 1: LEXICO]</span> Tokens identificados: ${tokens.length}.`);
+
+        tokens.forEach((t, i) => {
+          tokensBody.insertAdjacentHTML('beforeend', `<tr>
+            <td>${i + 1}</td>
+            <td><code>${t.tipo}</code></td>
+            <td><code>${t.valor}</code></td>
+            <td>${t.linea}</td>
+            <td>${t.columna}</td>
+          </tr>`);
+        });
+
+        const parser = new Parser(tokens);
+        const ast = parser.parsear();
+        log.push(`<span class="log-info">[FASE 2: SINTACTICO]</span> Arbol AST construido (${ast.cuerpo.length} instrucciones raiz).`);
+        astView.textContent = JSON.stringify(ast, null, 2);
+
+        const semantico = new AnalizadorSemantico();
+        const resSem = semantico.analizar(ast);
+
+        resSem.tabla.forEach(sym => {
+          simbolosBody.insertAdjacentHTML('beforeend', `<tr>
+            <td><b>${sym.nombre}</b></td>
+            <td>${sym.linea}</td>
+          </tr>`);
+        });
+
+        if (!resSem.valido) {
+          resSem.errores.forEach(err => {
+            log.push(`<span class="log-err">${err}</span>`);
+            errArea.insertAdjacentHTML('beforeend', `<div style="color:#f48771; font-size:12px; margin-bottom:4px;">${err}</div>`);
+          });
+          log.push(`<span class="log-err">[ERROR] Proceso abortado por inconsistencias semanticas.</span>`);
+          term.innerHTML = log.join('\n');
+          statusComp.textContent = 'Error Semantico';
+          return;
+        }
+        log.push(`<span class="log-info">[FASE 3: SEMANTICO]</span> Analisis semantico aprobado sin errores.`);
+
+        const gen = new GeneradorCodigo();
+        const codigoJs = gen.generar(ast);
+        const cmds = gen.generarComandosPlanos(ast);
+        cmdView.textContent = cmds.map((c, i) => `${i + 1}. ${c}`).join('\n') || '// Sin comandos de vuelo directos';
+        jsView.textContent = codigoJs;
+        log.push(`<span class="log-info">[FASE 4: CODEGEN]</span> Comandos de vuelo y codigo objeto generados.`);
+
+        log.push(`\n<span class="log-header">---------------- SIMULACION DE VUELO ----------------</span>`);
+        const salidas = [];
+        const originalLog = console.log;
+        console.log = (...args) => salidas.push(args.join(' '));
+
+        try {
+          new Function(codigoJs)();
+          salidas.forEach(lin => log.push(`<span class="log-out">${lin}</span>`));
+        } catch (eRun) {
+          log.push(`<span class="log-err">Error de ejecucion: ${eRun.message}</span>`);
+        } finally {
+          console.log = originalLog;
+        }
+
+        const deltaT = (performance.now() - t0).toFixed(1);
+        log.push(`<span class="log-header">-----------------------------------------------------</span>`);
+        log.push(`<span class="log-info">Compilacion y ejecucion exitosa finalizada en ${deltaT} ms.</span>`);
+        term.innerHTML = log.join('\n');
+        statusComp.textContent = `Compilado en ${deltaT} ms`;
+
+      } catch (e) {
+        log.push(`<span class="log-err">${e.message}</span>`);
+        log.push(`<span class="log-err">[ERROR] Fallo en la etapa de compilacion.</span>`);
+        term.innerHTML = log.join('\n');
+        statusComp.textContent = 'Error de compilacion';
+      }
+    }
+
+    window.onload = () => {
+      seleccionarEjemplo();
+    };
+  </script>
+</body>
+</html>
